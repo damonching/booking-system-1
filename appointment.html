@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointment Booking System</title>
+    <style>
+        /* .container {
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 300px;
+        }
+        .container label, .container select, .container input[type="text"] {
+            display: block;
+            margin-bottom: 10px;
+        } */
+
+        .container {
+         margin: 20px auto; /* Center the container horizontally */
+         padding: 20px;
+         border-radius: 10px;
+         background-color: #f9f9f9;
+         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Add a subtle shadow effect */
+         width: 320px; /* Increased width for a better layout */
+         font-family: Arial, sans-serif; /* Use a commonly available font */
+        }
+
+        .container h1 {
+         margin-bottom: 20px;
+         color: #333; /* Darker text color */
+        }
+
+        .container div {
+         margin-bottom: 15px;
+        }
+
+        .container label {
+         display: block;
+         margin-bottom: 5px;
+         font-weight: bold;
+         color: #555; /* Slightly darker label color */
+        }
+
+        .container input[type="text"],
+        .container input[type="email"],
+        .container select {
+         width: calc(100% - 10px); /* Adjusted width to accommodate padding */
+         padding: 8px; /* Increased padding for better spacing */
+         border-radius: 5px;
+         border: 1px solid #ccc;
+         box-sizing: border-box;
+        }
+
+        .container input[type="checkbox"] {
+         margin-right: 5px;
+        }
+
+        .container button {
+        width: 100%;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        background-color: #007bff; /* Primary button color */
+        color: #fff; /* Text color for contrast */
+        cursor: pointer;
+        }
+
+        .container button:hover {
+        background-color: #0056b3; /* Darker shade on hover */
+        }
+
+        .container #confirmation {
+         margin-top: 20px; 
+         padding: 10px; 
+         border-radius: 5px;
+         background-color: #e9f5ec; /* Light green background for confirmation */
+         border: 1px solid #86cc9c; /* Green border */
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Appointment Booking System</h1>
+        
+        <div>
+            <label for="name">Your Name:</label>
+            <input type="text" id="name" required>
+        </div>
+
+        <div>
+            <label for="email">Your Email:</label>
+            <input type="email" id="email" required>
+        </div>
+
+        <div>
+            <label for="department">Select Department:</label>
+            <select id="department" onchange="populateProviders()">
+                <option value="">Select Department</option>
+                <option value="Cardiology">Cardiology</option>
+                <option value="Dermatology">Dermatology</option>
+                <option value="Gastroenterology">Gastroenterology</option>
+                <option value="Neurology">Neurology</option>
+                <option value="Orthopedics">Orthopedics</option>
+                <option value="Pediatrics">Pediatrics</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="date">Select Date:</label>
+            <input type="date" id="date" onchange="populateProviders()">
+        </div>
+
+        <div>
+            <label for="time">Select Time:</label>
+            <select id="time">
+                <option value="">Select Time</option>
+                <option value="09:00">9:00 AM</option>
+                <option value="10:00">10:00 AM</option>
+                <option value="11:00">11:00 AM</option>
+                <option value="12:00">12:00 PM</option>
+                <option value="13:00">1:00 PM</option>
+                <option value="14:00">2:00 PM</option>
+                <option value="15:00">3:00 PM</option>
+                <option value="16:00">4:00 PM</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="provider">Select Healthcare Provider:</label>
+            <select id="provider">
+                <option value="">Select Provider</option>
+            </select>
+        </div>
+
+        <div>
+            <input type="checkbox" id="sendEmail">
+            <label for="sendEmail">Send appointment details via email</label>
+        </div>
+
+        <div>
+            <button onclick="bookAppointment()">Book Appointment</button>
+        </div>
+
+        <div id="confirmation"></div>
+    </div>
+
+    <script>
+        var providersData = {
+            "Cardiology": ["Dr. Smith", "Dr. Johnson"],
+            "Dermatology": ["Dr. Brown", "Dr. Lee"],
+            "Gastroenterology": ["Dr. Garcia", "Dr. Patel"],
+            "Neurology": ["Dr. Williams", "Dr. Anderson"],
+            "Orthopedics": ["Dr. Martinez", "Dr. Thompson"],
+            "Pediatrics": ["Dr. Robinson", "Dr. Clark"]
+        };
+
+        function populateProviders() {
+            var departmentDropdown = document.getElementById("department");
+            var providerDropdown = document.getElementById("provider");
+            var selectedDepartment = departmentDropdown.value;
+
+            providerDropdown.innerHTML = "<option value=''>Select Provider</option>"; // Clear existing options
+
+            // Populate provider dropdown with providers for the selected department
+            if (selectedDepartment && providersData[selectedDepartment]) {
+                var providers = providersData[selectedDepartment];
+                providers.forEach(function(provider) {
+                    var option = document.createElement("option");
+                    option.text = provider;
+                    option.value = provider;
+                    providerDropdown.add(option);
+                });
+            }
+        }
+
+        function bookAppointment() {
+            var name = document.getElementById("name").value;
+            var email = document.getElementById("email").value;
+            var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Regular expression for email format
+            var dateInput = document.getElementById("date");
+            var selectedDate = new Date(dateInput.value);
+            var currentDate = new Date();
+            currentDate.setHours(0, 0, 0, 0); // Set time to midnight for accurate comparison
+            var time = document.getElementById("time").value;
+            var provider = document.getElementById("provider").value;
+            var sendEmail = document.getElementById("sendEmail").checked;
+
+
+            // Validate input
+            if (!name || !email || !date || !time || !provider) {
+                alert("Please fill in all fields.");
+                return;
+            }
+
+               // Validate email format
+            if (!emailPattern.test(email)) {
+                 alert("Please enter a valid email address.");
+                  return;
+            }
+
+             // Check if selected date is earlier than today
+             if (selectedDate < currentDate) {
+             alert("You cannot book appointments for dates earlier than today.");
+            return;
+            }
+
+            // Create appointment object
+            var appointment = {
+                name: name,
+                email: email,
+                date: dateInput.value,
+                time: time,
+                provider: provider
+            };
+
+            // Save appointment (for demonstration purpose, just display confirmation)
+            var confirmationMsg = "Appointment scheduled for " + appointment.name + ":<br>";
+            confirmationMsg += "<strong>Date:</strong> " + appointment.date + "<br>";
+            confirmationMsg += "<strong>Time:</strong> " + formatTime(appointment.time) + "<br>";
+            confirmationMsg += "<strong>Provider:</strong> " + appointment.provider + "<br>";
+            confirmationMsg += "<strong>Email:</strong> " + appointment.email;
+
+            document.getElementById("confirmation").innerHTML = confirmationMsg;
+
+            // Send email if selected
+            if (sendEmail) {
+                // You can add the code to send email here
+                alert("Email sent to " + appointment.email);
+            }
+        }
+
+        function formatTime(time) {
+            var parts = time.split(':');
+            var hour = parseInt(parts[0]);
+            var period = (hour >= 12) ? 'PM' : 'AM';
+            hour = (hour > 12) ? (hour - 12) : hour;
+            return hour + ':' + parts[1] + ' ' + period;
+        }
+    </script>
+</body>
+</html>

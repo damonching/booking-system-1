@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Appointments</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="firebase/firebase-config.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .appointment-card {
+            margin-bottom: 20px;
+        }
+
+        .no-appointments {
+            text-align: center;
+            color: #888;
+        }
+
+        /* Custom card style with background color */
+        .custom-card {
+            margin-top: 20px;
+            max-width: 18rem;
+            margin-right: 10px; /* Add margin to create space between cards */
+        }
+
+        .past-appointment {
+            background-color: #e27a0a !important; /* Set background color for past appointments */
+        }
+
+        .upcoming-appointment {
+            background-color: #007bff !important; /* Set background color for upcoming appointments */
+        }
+
+        .custom-card-header {
+            color: #fff;
+            text-align: center;
+        }
+
+        .custom-card-body {
+            background-color: #f8f9fa;
+        }
+
+       /* Adjustments for buttons */
+        .btn-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .btn-container button {
+            flex: 1;
+            width: calc(50% - 5px); /* Set button width */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Home button -->
+        <a href="provider_dashboard.html" style="text-decoration: none; color: #007bff; margin-bottom: 20px; display: block; text-align: center;">&larr; Home</a>
+        <h1><i class="bi bi-calendar-check"></i> Your Appointments</h1>
+        <div class="row justify-content-around" id="appointments-list"></div>
+    </div>
+
+    <script>
+        var db = firebase.firestore();
+
+        // Function to get the signed-in user's email and userType from Realtime Database
+        function getSignedInUserData() {
+            return new Promise((resolve, reject) => {
+                firebase.auth().onAuthStateChanged(user => {
+                    if (user) {
+                        const userId = user.uid;
+                        firebase.database().ref('users/' + userId).once('value', snapshot => {
+                            const userData = snapshot.val();
+                            if (userData && userData.email && userData.userType) {
+                                resolve({ email: userData.email, userType: userData.userType });
+                            } else {
+                                reject(new Error('User data not found'));
+                            }
+                        });
+                    } else {
+                        reject(new Error('User not signed in'));
+                    }
+                });
+            });
+        }
+
+        async function viewAppointments() {
+            try {
+                const signedInUserData = await getSignedInUserData();
+                console.log('Signed-in user:', signedInUserData);
+
+                const userEmail = signedInUserData.email;
+
+                const appointmentsList = document.getElementById('appointments-list');
+                const appointmentCollectionRef = firebase.firestore().collection('Appointments');
+                appointmentCollectionRef.where('ProvidersEmail', '==', userEmail).get()
+                    .then(querySnapshot => {
+                        if (querySnapshot.empty) {
+                            const noAppointmentsMessage = document.createElement('p');
+                            noAppointmentsMessage.textContent = 'No appointments found.';
+                            noAppointmentsMessage.classList.add('no-appointments');
+                            appointmentsList.appendChild(noAppointmentsMessage);
+                        } else {
+                            console.log('Appointments fetched:');
+                            const currentDate = new Date();
+                            querySnapshot.forEach(doc => {
+                                const appointmentData = doc.data();
+                                console.log(appointmentData); // Log appointment data
+
+                                // Check if the appointment date is in the past
+                                const appointmentDate = new Date(appointmentData.Date);
+                                const isPastAppointment = appointmentDate < currentDate;
+
+                                // Create custom appointment card with background color
+                                const appointmentCard = document.createElement('div');
+                                appointmentCard.classList.add('card', 'custom-card', 'appointment-card', 'col-md-4', 'col-sm-6', isPastAppointment ? 'past-appointment' : 'upcoming-appointment');
+                                appointmentCard.innerHTML = `
+                                    <div class="card-header custom-card-header">${appointmentData.Department}</div>
+                                    <div class="card-body custom-card-body">
+                                        <p class="card-text"><strong>Name:</strong> ${appointmentData.Name}</p>
+                                        <p class="card-text"><strong>Date:</strong> ${appointmentData.Date}</p>
+                                        <p class="card-text"><strong>Time:</strong> ${appointmentData.Time}</p>
+                                        <p class="card-text"><strong>Provider:</strong> ${appointmentData.Provider}</p>
+                                        <p class="card-text"><strong>Provider's Email:</strong> ${appointmentData.ProvidersEmail}</p>
+                                        <button class="btn btn-primary" onclick="viewPatientProfile('${appointmentData.Email}')">Patient Profile</button>
+                                        <button class="btn btn-danger ml-2" onclick="cancelAppointment('${doc.id}')">Cancel</button>
+                                    </div>
+                                `;
+                                appointmentsList.appendChild(appointmentCard);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error getting appointments:', error);
+                    });
+            } catch (error) {
+                console.error(error.message);
+            }
+        }
+
+
+       
+        
+        async function viewPatientProfile(Email) {
+    try {
+        const patientCollectionRef = firebase.firestore().collection('Patient');
+        const querySnapshot = await patientCollectionRef.where('Email', '==', Email).get();
+
+        if (querySnapshot.empty) {
+            console.log('Patient profile not found');
+            alert('Patient profile not found');
+            return;
+        }
+
+        querySnapshot.forEach(doc => {
+            const patientData = doc.data();
+            console.log('Patient Profile:', patientData);
+            displayPatientProfile(patientData);
+        });
+    } catch (error) {
+        console.error('Error getting patient profile:', error);
+        alert('Error getting patient profile');
+    }
+}
+
+// Function to display patient profile data
+function displayPatientProfile(patientData) {
+    // You can customize this to display the data as per your requirement
+    
+    console.log(`Patient Name: ${patientData.Name}, Birthdate: ${patientData.Birthdate}, Email: ${patientData.Email}`);
+    window.open(`patient_profile.html?email=${patientData.Email}`, '_blank');
+     
+   
+}
+
+function openPatientProfile() {
+            window.open(`patient_profile.html?email=${patientData.Email}`, '_blank');
+            console.log
+        }
+
+          // Function to handle canceling appointments
+          function cancelAppointment(appointmentId) {
+            if (confirm("Are you sure you want to cancel this appointment?")) {
+                const appointmentRef = firebase.firestore().collection('Appointments').doc(appointmentId);
+                appointmentRef.delete()
+                    .then(() => {
+                        // Remove the card from the UI
+                        const appointmentCard = document.getElementById(appointmentId);
+                        if (appointmentCard) {
+                            appointmentCard.remove();
+                            console.log("Appointment canceled successfully.");
+                            window.location.href = `view_appointment_provider.html`
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error canceling appointment:", error);
+                    });
+            }
+            
+        }
+
+        // Call viewAppointments function when the page loads
+        viewAppointments();
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
